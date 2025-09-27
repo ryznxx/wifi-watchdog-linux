@@ -1,49 +1,110 @@
-# WiFi Watchdog (Linux)
+# **WiFi Watchdog – Bash Script**
 
-`wifi-watchdog` is a simple **systemd-based service** that automatically **restores WiFi connectivity** when your internet goes down.
-Instead of manually running `nmcli` every time the connection drops, this watchdog keeps your WiFi alive and reconnects automatically.
+This project is a **WiFi watchdog for Linux** that automatically checks your WiFi dongle and reconnects to a network if the internet goes down.
+It also keeps logs of every event, so you can debug when and why your connection dropped.
 
-## ✨ Features
+---
 
-* Periodically checks internet connectivity (default: every 30s).
-* Pings a target host (default: `8.8.8.8`) to verify connection.
-* Automatically runs `disconnect` + `connect` on the WiFi interface if connection is lost.
-* Runs as a **systemd service**, auto-starts on boot.
+## 🔧 How It Works
 
-## ⚙️ Installation
+* Checks if the WiFi interface exists (dongle plugged in).
+* Pings `8.8.8.8` to verify connectivity.
+* If connection is lost:
 
-```bash
-# clone the repo
-git clone https://github.com/ryznxx/wifi-watchdog-linux.git
-cd wifi-watchdog
+  * Tries reconnecting **up to 3 times** using `nmcli`.
+  * If still fails → restarts the WiFi interface.
+* Logs every action into `./wifi-info/logwifi.txt`.
+* Resets the log file automatically if older than **7 days**.
+* Marks each reboot with `[REBOOT] Service start`.
 
-# copy script
-sudo cp wifi-watchdog.sh /usr/local/bin/
-sudo chmod +x /usr/local/bin/wifi-watchdog.sh
+---
 
-# copy systemd service
-sudo cp wifi-watchdog.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now wifi-watchdog
-```
-
-## 🔧 Configuration
-
-Edit the variables inside `wifi-watchdog.sh` as needed:
+## 📜 Script Example
 
 ```bash
-WIFI_INTERFACE="wlan0"   # change this to your WiFi interface
-PING_TARGET="8.8.8.8"    # target host to ping (can be your router/gateway)
-SLEEP_INTERVAL=30        # check interval in seconds
+SSID="XPON-KH6c"
+PASS="12345678"
+IFACE="wlx2023511faf6d"
+LOGDIR="./wifi-info"
+LOGFILE="$LOGDIR/logwifi.txt"
 ```
 
-## 📡 Check service status
+Change:
 
-```bash
-systemctl status wifi-watchdog
-journalctl -u wifi-watchdog -f
+* `SSID` → Your WiFi network name
+* `PASS` → WiFi password
+* `IFACE` → Your WiFi dongle interface (check with `ip link`)
+
+---
+
+## 🚀 Usage
+
+1. Copy the script to your system:
+
+   ```bash
+   cp wifi-watchdog.sh /usr/local/bin/wifi-watchdog.sh
+   chmod +x /usr/local/bin/wifi-watchdog.sh
+   ```
+
+2. Run manually:
+
+   ```bash
+   ./wifi-watchdog.sh
+   ```
+
+3. Or run as a background service (systemd recommended). Example `wifi-watchdog.service`:
+
+   ```ini
+   [Unit]
+   Description=WiFi Watchdog Service
+   After=network.target
+
+   [Service]
+   ExecStart=/usr/local/bin/wifi-watchdog.sh
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   Then:
+
+   ```bash
+   sudo cp wifi-watchdog.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now wifi-watchdog
+   ```
+
+---
+
+## 📂 Logs
+
+All logs are stored in:
+
 ```
+./wifi-info/logwifi.txt
+```
+
+Example log entries:
+
+```
+2025-09-27 10:00:00 -> [REBOOT] Service start
+2025-09-27 10:05:12 -> [WARN] Koneksi terputus, coba reconnect...
+2025-09-27 10:05:20 -> [OK] WiFi berhasil reconnect ke XPON-KH6c (percobaan 2)
+```
+
+---
+
+## 📡 Notes
+
+* Requires `nmcli` (NetworkManager).
+* Works best with WiFi dongles (tested on USB WiFi adapters).
+* Adjust the `sleep` duration if you want faster/slower checks.
+
+---
 
 ## 📜 License
 
-MIT License – free to use, modify, and share.
+No need license all is yours
+
+⚡ Mau gw bikinin juga **badge status (systemd running/stopped)** buat README biar keliatan lebih pro kalau diliat di GitHub?

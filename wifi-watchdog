@@ -1,0 +1,56 @@
+#!/bin/bash
+SSID="your wifi name"
+PASS="12345678"
+IFACE="okodwek" your interface if using dongle like me
+LOGDIR="./wifi-info"
+LOGFILE="$LOGDIR/logwifi.txt"
+
+mkdir -p "$LOGDIR"
+
+log_event() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') -> $1" >> "$LOGFILE"
+}
+
+# reset log kalau file lebih tua dari 7 hari
+if [ -f "$LOGFILE" ]; then
+    if [ $(find "$LOGFILE" -mtime +7) ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') -> [INFO] Log lebih tua dari 7 hari, reset file" > "$LOGFILE"
+    fi
+fi
+
+# tandai start/reboot
+log_event "[REBOOT] Service start"
+
+while true; do
+    if ! ip link show "$IFACE" > /dev/null 2>&1; then
+        log_event "[ERROR] Dongle hilang / WiFi dicopot"
+    else
+        if ! ping -c1 -W2 8.8.8.8 > /dev/null 2>&1; then
+            log_event "[WARN] Koneksi terputus, coba reconnect..."
+            success=false
+            for i in 1 2 3; do
+                nmcli dev wifi connect "$SSID" password "$PASS" ifname "$IFACE" >/dev/null 2>&1
+                sleep 5
+                if ping -c1 -W2 8.8.8.8 > /dev/null 2>&1; then
+                    log_event "[OK] WiFi berhasil reconnect ke $SSID (percobaan $i)"
+                    success=true
+                    break
+                fi
+            done
+
+            if [ "$success" = false ]; then
+                log_event "[FAIL] Gagal connect 3x, restart interface..."
+                nmcli dev disconnect "$IFACE" >/dev/null 2>&1
+                sleep 3
+                nmcli dev connect "$IFACE" >/dev/null 2>&1
+                sleep 5
+                if ping -c1 -W2 8.8.8.8 > /dev/null 2>&1; then
+                    log_event "[OK] WiFi hidup lagi setelah restart interface"
+                else
+                    log_event "[CRITICAL] WiFi tetep gagal walau interface di-restart"
+                fi
+            fi
+        fi
+    fi
+    sleep 5
+done

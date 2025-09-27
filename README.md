@@ -22,7 +22,7 @@ It also keeps logs of every event, so you can debug when and why your connection
 ## 📜 Script Example
 
 ```bash
-SSID="XPON-KH6c"
+SSID="ryznxx-xpon-kh6c"
 PASS="12345678"
 IFACE="wlx2023511faf6d"
 LOGDIR="./wifi-info"

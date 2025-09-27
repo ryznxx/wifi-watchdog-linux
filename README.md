@@ -14,7 +14,7 @@ Instead of manually running `nmcli` every time the connection drops, this watchd
 
 ```bash
 # clone the repo
-git clone https://github.com/username/wifi-watchdog.git
+git clone https://github.com/ryznxx/wifi-watchdog-linux.git
 cd wifi-watchdog
 
 # copy script
